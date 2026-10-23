@@ -69,10 +69,10 @@ public class RaceWeekendTest {
         assertNull(RaceWeekend.parseTime("2026-10-25"));
         assertNull(RaceWeekend.parseTime("2026-10-25T20:00:00"));      // no zone: ambiguous, so refused
         assertNull(RaceWeekend.parseTime("2026-10-25T25:00:00Z"));     // the hour rolls over
-        // A fractional part and a numeric offset mean the same instant as the Z form.
+        // A fractional part and a numeric offset name the same instant another way: 01:00 at UTC+5
+        // is 20:00 UTC the day before.
         assertEquals(RaceWeekend.parseTime("2026-10-25T20:00:00Z"), RaceWeekend.parseTime("2026-10-25T20:00:00.000+00:00"));
-        assertEquals((Long) (RaceWeekend.parseTime("2026-10-25T20:00:00Z") + 5L * 60 * 60 * 1000),
-                RaceWeekend.parseTime("2026-10-26T01:00:00+05:00"));
+        assertEquals(RaceWeekend.parseTime("2026-10-25T20:00:00Z"), RaceWeekend.parseTime("2026-10-26T01:00:00+05:00"));
     }
 
 }

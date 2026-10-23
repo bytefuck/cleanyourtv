@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.os.Build;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -277,11 +278,15 @@ final class WallpaperPlayer {
             if (decoded == null) return null;
             if (dimColor != 0) new Canvas(decoded).drawColor(dimColor);
             // One copy in GPU memory instead of a software bitmap plus its texture; the decode stays off the UI
-            // thread for rotations, and Home's return no longer uploads 4-8 MB to the GPU.
-            Bitmap gpu = decoded.copy(Bitmap.Config.HARDWARE, false);
-            if (gpu == null) return decoded;
-            decoded.recycle();
-            return gpu;
+            // thread for rotations, and Home's return no longer uploads 4-8 MB to the GPU. HARDWARE bitmaps
+            // need API 26; below that the software bitmap is used as decoded.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Bitmap gpu = decoded.copy(Bitmap.Config.HARDWARE, false);
+                if (gpu == null) return decoded;
+                decoded.recycle();
+                return gpu;
+            }
+            return decoded;
         } catch (Exception | OutOfMemoryError failure) {
             return null;
         }

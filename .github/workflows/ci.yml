@@ -48,4 +48,6 @@ jobs:
         run: |
           size=$(stat -c %s launcher/app/build/outputs/apk/release/app-release.apk)
           echo "release APK: $((size / 1024)) KB"
-          test "$size" -lt 491520 || { echo "APK is over 480 KB; the launcher targets 1 GB TVs, keep it small"; exit 1; }
+          # This fork installs from Android 6 (minSdk 23), so the APK is v1-signed as well, which the
+          # JAR signature of a few hundred entries costs about 12 KB; the floor itself is unchanged.
+          test "$size" -lt 503808 || { echo "APK is over 492 KB; the launcher targets 1 GB TVs, keep it small"; exit 1; }

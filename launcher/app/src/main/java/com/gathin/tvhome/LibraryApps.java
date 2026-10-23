@@ -15,7 +15,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.IntPredicate;
 
 /** Home shortcut choices made from the library, separate from theme defaults and tile ordering. */
 final class LibraryApps {
@@ -116,7 +115,12 @@ final class LibraryApps {
     }
 
     /** After adding a shortcut, prefer another missing app; otherwise stay by a neighbour. */
-    static int nextFocus(int current, int count, IntPredicate missing) {
+    /** Stands in for java.util.function.IntPredicate, which needs API 24. */
+    interface Missing {
+        boolean test(int index);
+    }
+
+    static int nextFocus(int current, int count, Missing missing) {
         if (count <= 0) return -1;
         current = Math.max(0, Math.min(current, count - 1));
         for (int step = 1; step < count; step++) {

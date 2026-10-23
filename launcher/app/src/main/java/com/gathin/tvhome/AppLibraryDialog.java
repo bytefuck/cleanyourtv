@@ -38,6 +38,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.text.Collator;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -46,7 +47,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Predicate;
 
 /** On-demand installed-app picker. Uses the launcher's glass resources; no backdrop capture or blur. */
 final class AppLibraryDialog {
@@ -77,7 +77,7 @@ final class AppLibraryDialog {
     /** Only the latest load fills the catalogue, and it shows the popup if an opening is waiting. */
     private final LibraryLoads loads = new LibraryLoads();
     private final Activity activity;
-    private final Predicate<String> onHome;
+    private final OnHome onHome;
     private final Runnable changed;
     private final LinearLayout panel;
     private final boolean reducedMotion;
@@ -143,7 +143,12 @@ final class AppLibraryDialog {
         if (popup.isShowing()) popup.update(width, height);
     }
 
-    AppLibraryDialog(Activity activity, boolean animations, boolean reducedMotion, boolean selectionMode, Predicate<String> onHome, Runnable changed, Runnable dismissed) {
+    /** Stands in for java.util.function.Predicate, which needs API 24. */
+    interface OnHome {
+        boolean test(String pkg);
+    }
+
+    AppLibraryDialog(Activity activity, boolean animations, boolean reducedMotion, boolean selectionMode, OnHome onHome, Runnable changed, Runnable dismissed) {
         this.activity = activity;
         this.animations = animations;
         this.rtl = activity.getResources().getBoolean(R.bool.rtl_app_grid);
@@ -275,7 +280,7 @@ final class AppLibraryDialog {
         }
         catalogTime = System.currentTimeMillis();
         Collator collator = Collator.getInstance();
-        apps.sort((a, b) -> {
+        Collections.sort(apps, (a, b) -> {
             String pa = a.activityInfo.packageName, pb = b.activityInfo.packageName;
             if (selectionMode) return LibraryApps.compareCatalog(home.get(pa), label(a), pa,
                     home.get(pb), label(b), pb, collator);

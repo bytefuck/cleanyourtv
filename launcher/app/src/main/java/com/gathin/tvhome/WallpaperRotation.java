@@ -4,7 +4,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -23,7 +22,8 @@ final class WallpaperRotation {
         List<File> result = new ArrayList<>();
         File[] entries = directory == null ? null : directory.listFiles();
         if (entries == null) return result;
-        Arrays.sort(entries, Comparator.comparing(File::getName));
+        // A lambda Comparator, not Comparator.comparing: that static method needs API 24.
+        Arrays.sort(entries, (a, b) -> a.getName().compareTo(b.getName()));
         for (File entry : entries) {
             String name = entry.getName().toLowerCase(Locale.ROOT);
             if (entry.isFile() && entry.length() > 0 && entry.length() <= 10 * 1024 * 1024

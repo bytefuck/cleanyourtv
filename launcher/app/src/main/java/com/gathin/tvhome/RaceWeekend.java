@@ -91,7 +91,7 @@ final class RaceWeekend {
             this.name = name;
             this.place = place;
             List<Session> sorted = new ArrayList<>(sessions);
-            sorted.sort((a, b) -> Long.compare(a.start, b.start));
+            Collections.sort(sorted, (a, b) -> Long.compare(a.start, b.start));
             this.sessions = Collections.unmodifiableList(sorted);
         }
 
@@ -165,7 +165,8 @@ final class RaceWeekend {
         if (text == null) return null;
         Matcher m = Pattern.compile("(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d+)?(Z|[+-]\\d{2}:?\\d{2})?")
                 .matcher(text.trim());
-        if (!m.matches()) return null;
+        // No zone means the instant is ambiguous, so it is refused, exactly as Instant.parse refuses it.
+        if (!m.matches() || m.group(7) == null) return null;
         TimeZone zone = TimeZone.getTimeZone("UTC");
         if (m.group(7) != null && !"Z".equals(m.group(7))) {
             String off = m.group(7);

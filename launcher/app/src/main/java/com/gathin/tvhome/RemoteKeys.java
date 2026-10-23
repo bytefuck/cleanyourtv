@@ -13,7 +13,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.ToIntFunction;
 
 /**
  * Remote buttons that only the stock launcher answered, for InputKeyService and HomeKeyService: app_keys
@@ -45,7 +44,12 @@ final class RemoteKeys {
      * means it isn't one). Entries without a colon, with an unknown key or with no package are skipped; for a
      * keycode listed twice the last entry wins.
      */
-    static Map<Integer, String> parseAppKeys(Iterable<String> entries, ToIntFunction<String> names) {
+    /** Stands in for java.util.function.ToIntFunction, which needs API 24. */
+    interface KeyNames {
+        int applyAsInt(String name);
+    }
+
+    static Map<Integer, String> parseAppKeys(Iterable<String> entries, KeyNames names) {
         Map<Integer, String> keys = new HashMap<>();
         for (String entry : entries) {
             if (entry == null) continue;
@@ -74,7 +78,7 @@ final class RemoteKeys {
         return parseHoldAppKeys(entries, KeyEvent::keyCodeFromString);
     }
 
-    static Map<Integer, String> parseHoldAppKeys(Iterable<String> entries, ToIntFunction<String> names) {
+    static Map<Integer, String> parseHoldAppKeys(Iterable<String> entries, KeyNames names) {
         return parseAppKeys(holdEntries(entries), names);
     }
 

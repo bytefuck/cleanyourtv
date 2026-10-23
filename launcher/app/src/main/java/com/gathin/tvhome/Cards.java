@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.Supplier;
 
 /**
  * Module cards (docs/specs/card.md): an installed app can declare a card for its tile, with its own
@@ -183,7 +182,12 @@ final class Cards {
      * The decision records are only read when some app declares a card, and leanback is the launcher's
      * own LEANBACK_LAUNCHER query, so the app list isn't queried twice.
      */
-    static List<Card> discover(Context ctx, Set<String> hidden, Supplier<Map<String, Record>> recordSource,
+    /** Stands in for java.util.function.Supplier, which needs API 24. */
+    interface RecordSource {
+        Map<String, Record> get();
+    }
+
+    static List<Card> discover(Context ctx, Set<String> hidden, RecordSource recordSource,
                                List<ResolveInfo> leanback) {
         if ((ctx.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) selfCheck();
         List<Card> out = new ArrayList<>();

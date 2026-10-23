@@ -485,7 +485,7 @@ apps), which is why the report names that loss per package instead of calling it
 
 ## The launcher
 
-A small native home screen for Android TV: **about 474 KB**, plain Java, built for TVs with 1 GB of RAM.
+A small native home screen for Android TV: **about 486 KB** (v1-signed, as an Android 6 install needs), plain Java, built for TVs with 1 GB of RAM.
 No blur, no video, no network permission, no background services.
 
 The **TV** needs Android 6.0 (API 23) or newer: `minSdk` is a compile-time floor in
