@@ -488,7 +488,7 @@ apps), which is why the report names that loss per package instead of calling it
 A small native home screen for Android TV: **about 474 KB**, plain Java, built for TVs with 1 GB of RAM.
 No blur, no video, no network permission, no background services.
 
-The **TV** needs Android 8.0 (API 26) or newer: `minSdk` is a compile-time floor in
+The **TV** needs Android 6.0 (API 23) or newer: `minSdk` is a compile-time floor in
 [`launcher/app/build.gradle`](launcher/app/build.gradle), and the install script asks the TV for
 `ro.build.version.sdk` before it builds, so an older set is told both numbers instead of failing at
 `pm install` (see [Troubleshooting](docs/TROUBLESHOOTING.md) for what is left on such a set).

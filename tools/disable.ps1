@@ -102,7 +102,7 @@ if (-not $env:FORCE_HOME) {
     }
     # Neither query named Home, so the guard could not run. Say so (disable.sh, #795).
     if (-not $homePkg -and $pkgs.Count -gt 0) {
-        Write-Warning 'Could not tell which app owns Home on this TV, so the Home guard did not run: neither "cmd package resolve-activity" (added in Android 7) nor "dumpsys activity" named one. Check by hand that the list does not hold your launcher before running it: the replacement launcher needs Android 8.0 (minSdk 26), so on an older set the stock launcher is the only Home there is, and a set with no recovery has no way back (#795).'
+        Write-Warning 'Could not tell which app owns Home on this TV, so the Home guard did not run: neither "cmd package resolve-activity" (added in Android 7) nor "dumpsys activity" named one. Check by hand that the list does not hold your launcher before running it: the replacement launcher needs Android 6.0 (minSdk 23), so on an older set the stock launcher is the only Home there is, and a set with no recovery has no way back (#795).'
     }
 }
 # Same as disable.sh (#321): a package that asks for android.permission.TV_INPUT_HARDWARE is the software

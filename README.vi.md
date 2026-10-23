@@ -108,7 +108,7 @@ Xem thêm [hướng dẫn thư viện ứng dụng](docs/app-library.md).
 
 ## TV nào dùng được
 
-Danh sách dọn dẹp dành cho **Android TV / Google TV**; launcher hiện cần **Android 8.0 (API 26) trở lên**. Cộng đồng đã
+Danh sách dọn dẹp dành cho **Android TV / Google TV**; launcher hiện cần **Android 6.0 (API 23) trở lên**. Cộng đồng đã
 đóng góp cấu hình cho nhiều dòng TV và TV box; một số máy chạy Android thấp hơn mức tối thiểu của launcher, nên có danh
 sách dọn dẹp chưa chắc đã cài được launcher. Hãy đối chiếu model, khu vực và firmware trong
 [danh sách TV](examples/README.md), đọc ghi chú trong thư mục tương ứng rồi mới dùng danh sách tắt ứng dụng.

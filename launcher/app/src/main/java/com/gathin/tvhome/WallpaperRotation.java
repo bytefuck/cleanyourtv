@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
@@ -58,7 +59,12 @@ final class WallpaperRotation {
 
     static File pick(List<File> images, String previous, Random random) {
         List<File> candidates = new ArrayList<>(images);
-        if (candidates.size() > 1) candidates.removeIf(image -> image.getName().equals(previous));
+        if (candidates.size() > 1) {
+            // Iterator removal, not Collection.removeIf: this runs in plain JVM tests, and removeIf needs API 24.
+            for (Iterator<File> it = candidates.iterator(); it.hasNext(); ) {
+                if (it.next().getName().equals(previous)) it.remove();
+            }
+        }
         return candidates.isEmpty() ? null : candidates.get(random.nextInt(candidates.size()));
     }
 

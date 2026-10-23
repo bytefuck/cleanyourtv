@@ -137,7 +137,7 @@ if [ -n "$PKGS" ] && [ -z "$HOME_PKG" ] && [ -z "${FORCE_HOME:-}" ]; then
   echo "Could not tell which app owns Home on this TV, so the Home guard did not run: neither" >&2
   echo '"cmd package resolve-activity" (added in Android 7) nor "dumpsys activity" named one.' >&2
   echo 'Check by hand that the list does not hold your launcher before running it. The replacement' >&2
-  echo 'launcher needs Android 8.0 (minSdk 26), so on an older set the stock launcher is the only Home' >&2
+  echo 'launcher needs Android 6.0 (minSdk 23), so on an older set the stock launcher is the only Home' >&2
   echo 'there is: disabled, it leaves nothing to start, and a set with no recovery has no way back (#795).' >&2
 fi
 

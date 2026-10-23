@@ -9,7 +9,9 @@ android {
     defaultConfig {
         // Opt-in identity for firmware with a package-name HOME allowlist; see docs/devices/xiaomi-mitv-aetp0-dofus.md.
         applicationId providers.gradleProperty('launcherApplicationId').getOrElse('com.gathin.tvhome')
-        minSdk 26
+        // Android 6.0 (API 23): this fork lowers the repo's floor of 26 so the launcher runs on the
+        // older sets too; the java.time usages were rewritten on Calendar for it (see Day, RaceWeekend).
+        minSdk 23
         targetSdk 34
         versionCode 8
         versionName '2.7'

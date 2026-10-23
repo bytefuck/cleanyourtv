@@ -541,11 +541,10 @@ final class Config {
                 JSONObject s = sessions.optJSONObject(j);
                 if (s == null) continue;
                 String name = s.optString("name", "").trim();
-                try {
-                    if (!name.isEmpty()) parsed.add(new RaceWeekend.Session(name, java.time.Instant.parse(s.optString("start", ""))));
-                } catch (java.time.format.DateTimeParseException ignored) {
-                    // a session without a readable start time cannot be counted down
-                }
+                Long start = RaceWeekend.parseTime(s.optString("start", ""));
+                if (!name.isEmpty() && start != null) {
+                    parsed.add(new RaceWeekend.Session(name, start));
+                }   // a session without a readable start time cannot be counted down
             }
             if (!parsed.isEmpty()) races.add(new RaceWeekend.Race(r.optInt("round", 0),
                     r.optString("name", "Grand Prix").trim(), r.optString("place", "").trim(), parsed));

@@ -19,6 +19,18 @@ if [ -n "$MIN_SDK" ] && [ -n "$TV_SDK" ] && [ "$TV_SDK" -lt "$MIN_SDK" ]; then
   echo "half would need your own build with a lower minSdk (docs/TROUBLESHOOTING.md)." >&2
   exit 1
 fi
+# Android 6 and older have no `cmd` binary (Android 7 added it), so `cmd package resolve-activity`,
+# `cmd package compile` and `cmd package set-home-activity` cannot run there: the stock launcher is
+# found through `dumpsys activity` instead, the compile step is skipped, and Home is handed over with
+# the remote (press Home, pick the launcher, Always) instead of set-home-activity. The order of the
+# safety steps is unchanged: the new launcher still starts, and is checked, before the stock one is
+# disabled.
+OLD_SET=0
+if [ -n "$TV_SDK" ] && [ "$TV_SDK" -lt 24 ]; then
+  OLD_SET=1
+  echo "Note: this set runs SDK $TV_SDK, which has no 'cmd package': Home is chosen with the remote after"
+  echo "the install (press Home, pick the new launcher, Always), not with set-home-activity."
+fi
 # macOS: java_home or Homebrew; Linux: the java on PATH.
 # `/usr/libexec/java_home -v 17` means "17 or newer", so on a Mac whose only JDK is newer it prints
 # that one and exits 0, and the Homebrew fallback below never runs. Gradle 8.9 then stops with
@@ -49,10 +61,22 @@ export PATH="$JAVA_HOME/bin:$PATH"
 # Pass STOCK_LAUNCHER=<package> to name it yourself, or STOCK_LAUNCHER=none to disable nothing.
 KNOWN_STOCK_LAUNCHERS="com.google.android.tvlauncher com.google.android.apps.tv.launcherx com.google.android.leanbacklauncher com.mitv.tvhome"
 if [ -z "${STOCK_LAUNCHER:-}" ]; then
-  HOME_PKG=$("$PY" -I ../tools/tv.py 'cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME' \
-    | tail -n 1 | tr -d '\r' | cut -d/ -f1) || {
-    echo "ERROR: could not ask the TV which launcher owns Home. Check TV_HOST and the debugging prompt on the TV," >&2
-    echo "or pass STOCK_LAUNCHER=<package> yourself." >&2; exit 1; }
+  if [ "$OLD_SET" = 1 ]; then
+    # No `cmd` to resolve the HOME intent with: the framework's own answer (tools/disable.sh's
+    # fallback since #795), which names the package holding Home once it has run at least once.
+    HOME_PKG=$("$PY" -I ../tools/tv.py 'dumpsys activity' 2>/dev/null | tr -d '\r' \
+      | sed -nE 's/.*mHomeProcess:.*[: ]([A-Za-z0-9_.]+)\/[A-Za-z0-9_.]+.*/\1/p' | head -n 1 || true)
+    if [ -z "$HOME_PKG" ]; then
+      echo "ERROR: could not ask this set (SDK $TV_SDK) which launcher owns Home: 'dumpsys activity' named none." >&2
+      echo "Pass STOCK_LAUNCHER=<package> yourself, or STOCK_LAUNCHER=none to disable nothing." >&2
+      exit 1
+    fi
+  else
+    HOME_PKG=$("$PY" -I ../tools/tv.py 'cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME' \
+      | tail -n 1 | tr -d '\r' | cut -d/ -f1) || {
+      echo "ERROR: could not ask the TV which launcher owns Home. Check TV_HOST and the debugging prompt on the TV," >&2
+      echo "or pass STOCK_LAUNCHER=<package> yourself." >&2; exit 1; }
+  fi
   case " $KNOWN_STOCK_LAUNCHERS " in
     *" $HOME_PKG "*) STOCK_LAUNCHER=$HOME_PKG ;;
     *)
@@ -115,12 +139,21 @@ if ! printf '%s' "$START_OUT" | grep -qF 'Status: ok' || printf '%s' "$START_OUT
   echo "ERROR: the new launcher did not start (see above); $STOCK_LAUNCHER was left enabled." >&2
   exit 1
 fi
-printf '%s\n' \
-  "pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; echo location-granted" \
-  "cmd package compile -m speed -f com.gathin.tvhome" \
-  "$DISABLE_STOCK" \
-  "cmd package set-home-activity --user 0 com.gathin.tvhome/.MainActivity" \
-  | "$PY" -I ../tools/tv.py --batch
+if [ "$OLD_SET" = 1 ]; then
+  # SDK 23 has no `cmd`: no compile step, and Home cannot be set from the shell; the remote's Home
+  # press after this script hands it over instead (see the note at the top).
+  printf '%s\n' \
+    "pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; echo location-granted" \
+    "$DISABLE_STOCK" \
+    | "$PY" -I ../tools/tv.py --batch
+else
+  printf '%s\n' \
+    "pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; echo location-granted" \
+    "cmd package compile -m speed -f com.gathin.tvhome" \
+    "$DISABLE_STOCK" \
+    "cmd package set-home-activity --user 0 com.gathin.tvhome/.MainActivity" \
+    | "$PY" -I ../tools/tv.py --batch
+fi
 
 # Home's owner, or an empty string when the TV cannot be reached (pipefail would otherwise make a
 # lost connection abort the script with no explanation).
@@ -161,22 +194,31 @@ rollback_home() {
 # on Google TV 14 the next candidate is the setup wizard's RecoveryActivity, which crash-loops
 # system_server (see examples/xiaomi-tv-a-pro-2026). So check where Home ended up, and put the
 # stock launcher back if it is not ours.
-HOME_NOW=$(query_home)
-case "$HOME_NOW" in
-  com.gathin.tvhome/*) echo "Home now resolves to $HOME_NOW" ;;
-  *)
-    if [ -z "$HOME_NOW" ]; then
-      echo "ERROR: the TV stopped answering while Home was being switched, so the outcome is unknown." >&2
-    else
-      echo "ERROR: Home resolves to $HOME_NOW, not to the new launcher." >&2
-    fi
-    rollback_home || true
-    if [ -n "$HOME_NOW" ]; then
-      echo "On Google TV this usually means com.google.android.tungsten.setupwraith also claims Home: add it to" >&2
-      echo "your debloat list (see README, Troubleshooting), apply the list, then run this script again." >&2
-    fi
-    exit 1 ;;
-esac
+if [ "$OLD_SET" = 1 ]; then
+  # Nothing to check from here on an old set: without set-home-activity, Home is decided by the
+  # remote's next press (the chooser's Always), and mHomeProcess would still name the stock launcher
+  # until then, so the check below would only see a stale answer and roll a good install back.
+  echo "Press Home on the remote now: Android offers the launchers still enabled, so pick the new"
+  echo "launcher and choose Always. If the TV offers nothing, this puts the stock launcher back:"
+  echo "  TV_HOST=$TV_HOST tools/tv.py 'pm enable --user 0 $STOCK_LAUNCHER'"
+else
+  HOME_NOW=$(query_home)
+  case "$HOME_NOW" in
+    com.gathin.tvhome/*) echo "Home now resolves to $HOME_NOW" ;;
+    *)
+      if [ -z "$HOME_NOW" ]; then
+        echo "ERROR: the TV stopped answering while Home was being switched, so the outcome is unknown." >&2
+      else
+        echo "ERROR: Home resolves to $HOME_NOW, not to the new launcher." >&2
+      fi
+      rollback_home || true
+      if [ -n "$HOME_NOW" ]; then
+        echo "On Google TV this usually means com.google.android.tungsten.setupwraith also claims Home: add it to" >&2
+        echo "your debloat list (see README, Troubleshooting), apply the list, then run this script again." >&2
+      fi
+      exit 1 ;;
+  esac
+fi
 
 # Optional accessibility services. Off unless asked for, and Android switches them off again on
 # every reinstall, so pass the flag each time you run this script.

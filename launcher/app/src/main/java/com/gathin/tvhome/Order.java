@@ -53,7 +53,13 @@ final class Order {
     }
 
     static String dockKey(List<String> dockApps) {
-        return String.join(",", dockApps);
+        // Hand-joined, not String.join: this runs in plain JVM tests, and String.join needs API 24.
+        StringBuilder dock = new StringBuilder();
+        for (String pkg : dockApps) {
+            if (dock.length() > 0) dock.append(',');
+            dock.append(pkg);
+        }
+        return dock.toString();
     }
 
     static String encode(Order order) {

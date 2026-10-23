@@ -63,6 +63,9 @@ def run(command):
         return ""
     if "resolve-activity" in command:
         return state["home"] + "\n"
+    if "dumpsys activity" in command:
+        # The SDK-23 path: mHomeProcess names the package holding Home, as on a real old set.
+        return "  mHomeProcess: ProcessRecord{52f4a5c8 1234:" + state["home"].split("/")[0] + "/u0a56}\n"
     return ""
 
 
@@ -187,6 +190,18 @@ class MinSdkGuardTest(unittest.TestCase):
         self.assertIn("stock launcher was left untouched", result.stderr)
         self.assertFalse(any("pm disable-user" in c for c in state["commands"]))
 
+    def test_an_android_6_set_installs_without_the_cmd_commands(self):
+        # SDK 23 has no `cmd` binary (Android 7 added it): the stock launcher comes from dumpsys, the
+        # batch skips compile and set-home-activity, and the handover is the remote's Home press.
+        self.gradle.write_text("android {\n    defaultConfig {\n        minSdk 23\n    }\n}\n")
+        result, state = self.install(sdk="23")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Installed.", result.stdout)
+        self.assertIn("Press Home", result.stdout)
+        self.assertTrue(any("pm disable-user --user 0 com.google.android.tvlauncher" in c for c in state["commands"]))
+        self.assertFalse(any("cmd package" in c for c in state["commands"]),
+                         "SDK 23 has no `cmd`; none of its commands may reach the TV")
+
 
 class Android7DocsTest(unittest.TestCase):
     """The text #576 asked for: what an older set can and cannot do with this repo."""
@@ -217,7 +232,7 @@ class Android7DocsTest(unittest.TestCase):
     def test_readme_states_the_launcher_requirement_with_a_pointer(self):
         start = self.readme.index("## The launcher")
         section = self.readme[start:start + 1600]
-        self.assertIn("API 26", section)
+        self.assertIn("API 23", section)
         self.assertIn("launcher/app/build.gradle", section)
         self.assertIn("docs/TROUBLESHOOTING.md", section)
 

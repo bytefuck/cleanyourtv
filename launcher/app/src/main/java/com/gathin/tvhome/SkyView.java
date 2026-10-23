@@ -14,9 +14,8 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Calendar;
+import java.util.TimeZone;
 
 /**
  * A full-screen gradient that follows the clock: night blues, a warm horizon at sunset, a soft
@@ -76,8 +75,8 @@ public class SkyView extends View {
         String lon = getContext().getString(R.string.longitude);
         if (lat.isEmpty() || lon.isEmpty()) return null;
         try {
-            return Sun.riseAndSet(LocalDate.now(), Double.parseDouble(lat), Double.parseDouble(lon),
-                    ZoneId.systemDefault());
+            return Sun.riseAndSet(Day.today(), Double.parseDouble(lat), Double.parseDouble(lon),
+                    TimeZone.getDefault());
         } catch (NumberFormatException e) {
             return null;
         }

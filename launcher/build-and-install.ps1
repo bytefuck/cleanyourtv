@@ -37,12 +37,28 @@ if (-not (Test-Path local.properties)) {
 if ($LASTEXITCODE -ne 0) { throw 'Gradle build failed' }
 
 $py = '..\tools\venv\Scripts\python.exe'
+# Android 6 and older have no `cmd` binary (Android 7 added it): see build-and-install.sh for the
+# old-set path this switches on - dumpsys-based stock detection, no compile, Home with the remote.
+$oldSet = $false
+$sdkAnswer = (& $py -I ..\tools\tv.py 'getprop ro.build.version.sdk' | Select-Object -Last 1)
+if ("$sdkAnswer".Trim() -match '^\d+$' -and [int]"$sdkAnswer".Trim() -lt 24) {
+    $oldSet = $true
+    Write-Host "Note: this set runs SDK $($sdkAnswer.Trim()), which has no 'cmd package': Home is chosen with the remote after the install (press Home, pick the new launcher, Always), not with set-home-activity."
+}
 # Which app owns Home differs by build; ask the TV, but only accept a launcher we recognise (the answer
 # can also be Android's chooser "android", the setup wizard, or another third-party launcher).
 $knownStock = @('com.google.android.tvlauncher', 'com.google.android.apps.tv.launcherx', 'com.google.android.leanbacklauncher', 'com.mitv.tvhome')
 if (-not $StockLauncher) {
-    $homePkg = & $py -I ..\tools\tv.py 'cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME' | Select-Object -Last 1
-    if ($LASTEXITCODE -ne 0 -or -not $homePkg) { throw 'could not ask the TV which launcher owns Home; check -TvHost and the debugging prompt, or pass -StockLauncher <package>' }
+    if ($oldSet) {
+        # No `cmd` to resolve the HOME intent with: the framework's own answer (tools/disable.ps1's
+        # fallback), which names the package holding Home once it has run at least once.
+        $dump = (& $py -I ..\tools\tv.py 'dumpsys activity') -join "`n"
+        $homePkg = if ($dump -match 'mHomeProcess:[^\r\n]*[: ]([A-Za-z0-9_.]+)/[A-Za-z0-9_.]+') { $Matches[1] } else { $null }
+        if (-not $homePkg) { throw "could not ask this old set (SDK $($sdkAnswer.Trim())) which launcher owns Home: 'dumpsys activity' named none; pass -StockLauncher <package> or -StockLauncher none" }
+    } else {
+        $homePkg = & $py -I ..\tools\tv.py 'cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME' | Select-Object -Last 1
+        if ($LASTEXITCODE -ne 0 -or -not $homePkg) { throw 'could not ask the TV which launcher owns Home; check -TvHost and the debugging prompt, or pass -StockLauncher <package>' }
+    }
     $homePkg = "$homePkg".Trim().Split('/')[0]
     if ($knownStock -contains $homePkg) { $StockLauncher = $homePkg }
     elseif ($homePkg -eq 'com.gathin.tvhome') { $StockLauncher = 'none'; Write-Host 'Home already belongs to this launcher; nothing will be disabled.' }
@@ -66,32 +82,52 @@ $out = & $py -I ..\tools\tv.py 'pm install -r /data/local/tmp/tvhome.apk; rm -f 
 Write-Host $out
 if ("$out" -notmatch 'Success') { throw 'pm install failed; the stock launcher was left untouched' }
 # Android 9 only accepts a component here; Android 10+ also takes a bare package name.
-$out = & $py -I ..\tools\tv.py 'cmd package set-home-activity --user 0 com.gathin.tvhome/.MainActivity'
-Write-Host $out
-if ("$out" -match 'Error') { throw 'could not set the new launcher as home; the stock launcher was left untouched' }
+# Not on an old set: SDK 23 has no `cmd` at all, and Home is handed over with the remote instead.
+if (-not $oldSet) {
+    $out = & $py -I ..\tools\tv.py 'cmd package set-home-activity --user 0 com.gathin.tvhome/.MainActivity'
+    Write-Host $out
+    if ("$out" -match 'Error') { throw 'could not set the new launcher as home; the stock launcher was left untouched' }
+}
 # Start the launcher on its own, before the stock Home is touched (see build-and-install.sh, #239):
 # in the batch a failed start only prints an Error line and the stock launcher would be disabled anyway.
 $start = (& $py -I ..\tools\tv.py 'am start -W -a android.intent.action.MAIN -c android.intent.category.HOME -n com.gathin.tvhome/.MainActivity') -join "`n"
 Write-Host $start
 if ($start -notmatch 'Status: ok' -or $start -match '(?m)^Error') { throw "the new launcher did not start (see above); $StockLauncher was left enabled" }
-@(
-    'pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; echo location-granted',
-    'cmd package compile -m speed -f com.gathin.tvhome',
-    $disableStock,
-    'cmd package set-home-activity --user 0 com.gathin.tvhome/.MainActivity'
-) | & $py -I ..\tools\tv.py --batch
+if ($oldSet) {
+    # SDK 23 has no `cmd`: no compile step, and Home cannot be set from the shell; the remote's Home
+    # press after this script hands it over instead (see build-and-install.sh).
+    @(
+        'pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; echo location-granted',
+        $disableStock
+    ) | & $py -I ..\tools\tv.py --batch
+} else {
+    @(
+        'pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; echo location-granted',
+        'cmd package compile -m speed -f com.gathin.tvhome',
+        $disableStock,
+        'cmd package set-home-activity --user 0 com.gathin.tvhome/.MainActivity'
+    ) | & $py -I ..\tools\tv.py --batch
+}
 # Order matters, see build-and-install.sh: start the new launcher, disable the stock one, set the
 # preference last, then check where Home ended up and put the stock launcher back if it is not ours.
-$homeNow = (& $py -I ..\tools\tv.py 'cmd package resolve-activity --brief -c android.intent.category.HOME -a android.intent.action.MAIN' | Select-Object -Last 1).Trim()
-if ($homeNow -notlike 'com.gathin.tvhome/*') {
-    if ($StockLauncher -ne 'none') {
-        & $py -I ..\tools\tv.py "pm enable --user 0 $StockLauncher" | Out-Null
-        # set-home-activity needs pkg/activity on Android 9, so resolve the stock component on the TV.
-        & $py -I ..\tools\tv.py "cmd package set-home-activity --user 0 `$(cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME $StockLauncher | tail -n 1)" | Out-Null
+# On an old set there is nothing to check from here: without set-home-activity, Home is decided by
+# the remote's next press (the chooser's Always), and mHomeProcess would still name the stock
+# launcher until then, so the check would only see a stale answer and roll a good install back.
+if ($oldSet) {
+    Write-Host "Press Home on the remote now: Android offers the launchers still enabled, so pick the new launcher and choose Always. If the TV offers nothing, this puts the stock launcher back:"
+    Write-Host "  TV_HOST=$TvHost tools\tv.py 'pm enable --user 0 $StockLauncher'"
+} else {
+    $homeNow = (& $py -I ..\tools\tv.py 'cmd package resolve-activity --brief -c android.intent.category.HOME -a android.intent.action.MAIN' | Select-Object -Last 1).Trim()
+    if ($homeNow -notlike 'com.gathin.tvhome/*') {
+        if ($StockLauncher -ne 'none') {
+            & $py -I ..\tools\tv.py "pm enable --user 0 $StockLauncher" | Out-Null
+            # set-home-activity needs pkg/activity on Android 9, so resolve the stock component on the TV.
+            & $py -I ..\tools\tv.py "cmd package set-home-activity --user 0 `$(cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME $StockLauncher | tail -n 1)" | Out-Null
+        }
+        throw "Home resolves to '$homeNow', not to the new launcher; $StockLauncher was re-enabled. On Google TV this usually means com.google.android.tungsten.setupwraith also claims Home: add it to your debloat list (see README, Troubleshooting), apply it, then run this script again."
     }
-    throw "Home resolves to '$homeNow', not to the new launcher; $StockLauncher was re-enabled. On Google TV this usually means com.google.android.tungsten.setupwraith also claims Home: add it to your debloat list (see README, Troubleshooting), apply it, then run this script again."
+    Write-Host "Home now resolves to $homeNow"
 }
-Write-Host "Home now resolves to $homeNow"
 # Optional accessibility services, appended to enabled_accessibility_services without dropping others.
 function Enable-Service([string]$Name) {
     $svc = "com.gathin.tvhome/.$Name"

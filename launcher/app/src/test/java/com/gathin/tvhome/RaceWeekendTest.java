@@ -5,8 +5,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -19,31 +17,31 @@ public class RaceWeekendTest {
     private static final RaceWeekend.Race AUSTIN = new RaceWeekend.Race(18, "United States Grand Prix", "Austin",
             Arrays.asList(
                     // Out of order on purpose: the calendar is sorted by start time.
-                    new RaceWeekend.Session("race", Instant.parse("2026-10-25T20:00:00Z")),
-                    new RaceWeekend.Session("FP1", Instant.parse("2026-10-23T17:30:00Z")),
-                    new RaceWeekend.Session("FP2", Instant.parse("2026-10-23T21:00:00Z")),
-                    new RaceWeekend.Session("FP3", Instant.parse("2026-10-24T17:30:00Z")),
-                    new RaceWeekend.Session("Qualifying", Instant.parse("2026-10-24T21:00:00Z"))));
+                    new RaceWeekend.Session("race", RaceWeekend.parseTime("2026-10-25T20:00:00Z")),
+                    new RaceWeekend.Session("FP1", RaceWeekend.parseTime("2026-10-23T17:30:00Z")),
+                    new RaceWeekend.Session("FP2", RaceWeekend.parseTime("2026-10-23T21:00:00Z")),
+                    new RaceWeekend.Session("FP3", RaceWeekend.parseTime("2026-10-24T17:30:00Z")),
+                    new RaceWeekend.Session("Qualifying", RaceWeekend.parseTime("2026-10-24T21:00:00Z"))));
     private static final List<RaceWeekend.Race> CALENDAR = Collections.singletonList(AUSTIN);
 
     @Test
     public void nothingBeforeTheWeekendOpens() {
-        assertNull(RaceWeekend.at(CALENDAR, Instant.parse("2026-10-23T05:29:00Z")));
+        assertNull(RaceWeekend.at(CALENDAR, RaceWeekend.parseTime("2026-10-23T05:29:00Z")));
     }
 
     @Test
     public void opensTwelveHoursBeforeFirstPractice() {
-        RaceWeekend.State s = RaceWeekend.at(CALENDAR, Instant.parse("2026-10-23T05:30:00Z"));
+        RaceWeekend.State s = RaceWeekend.at(CALENDAR, RaceWeekend.parseTime("2026-10-23T05:30:00Z"));
         assertSame(AUSTIN, s.race);
         assertEquals("FP1", s.next.name);
-        assertEquals(Duration.ofHours(12), s.untilNext);
+        assertEquals(12L * 60 * 60 * 1000, s.untilNext);
         assertEquals(RaceWeekend.Status.NEXT, s.statuses.get(0));
         assertEquals(RaceWeekend.Status.LATER, s.statuses.get(4));
     }
 
     @Test
     public void aSessionOnTrackIsLiveAndTheNextOneIsCountedDown() {
-        RaceWeekend.State s = RaceWeekend.at(CALENDAR, Instant.parse("2026-10-24T21:30:00Z"));
+        RaceWeekend.State s = RaceWeekend.at(CALENDAR, RaceWeekend.parseTime("2026-10-24T21:30:00Z"));
         assertEquals("QUALIFYING", s.live.name);
         assertTrue(s.next.isRace());
         assertEquals(Arrays.asList(RaceWeekend.Status.DONE, RaceWeekend.Status.DONE, RaceWeekend.Status.DONE,
@@ -52,17 +50,29 @@ public class RaceWeekendTest {
 
     @Test
     public void theRaceIsLiveForTwoHoursThenFinished() {
-        RaceWeekend.State live = RaceWeekend.at(CALENDAR, Instant.parse("2026-10-25T21:59:00Z"));
+        RaceWeekend.State live = RaceWeekend.at(CALENDAR, RaceWeekend.parseTime("2026-10-25T21:59:00Z"));
         assertTrue(live.live.isRace());
         assertNull(live.next);
-        RaceWeekend.State done = RaceWeekend.at(CALENDAR, Instant.parse("2026-10-25T22:00:00Z"));
+        RaceWeekend.State done = RaceWeekend.at(CALENDAR, RaceWeekend.parseTime("2026-10-25T22:00:00Z"));
         assertTrue(done.finished());
     }
 
     @Test
     public void closesFourHoursAfterTheRaceStarts() {
-        assertTrue(RaceWeekend.at(CALENDAR, Instant.parse("2026-10-25T23:59:00Z")).finished());
-        assertNull(RaceWeekend.at(CALENDAR, Instant.parse("2026-10-26T00:00:00Z")));
+        assertTrue(RaceWeekend.at(CALENDAR, RaceWeekend.parseTime("2026-10-25T23:59:00Z")).finished());
+        assertNull(RaceWeekend.at(CALENDAR, RaceWeekend.parseTime("2026-10-26T00:00:00Z")));
+    }
+
+    @Test
+    public void unparseableTimesAreNull() {
+        assertNull(RaceWeekend.parseTime("not a time"));
+        assertNull(RaceWeekend.parseTime("2026-10-25"));
+        assertNull(RaceWeekend.parseTime("2026-10-25T20:00:00"));      // no zone: ambiguous, so refused
+        assertNull(RaceWeekend.parseTime("2026-10-25T25:00:00Z"));     // the hour rolls over
+        // A fractional part and a numeric offset mean the same instant as the Z form.
+        assertEquals(RaceWeekend.parseTime("2026-10-25T20:00:00Z"), RaceWeekend.parseTime("2026-10-25T20:00:00.000+00:00"));
+        assertEquals((Long) (RaceWeekend.parseTime("2026-10-25T20:00:00Z") + 5L * 60 * 60 * 1000),
+                RaceWeekend.parseTime("2026-10-26T01:00:00+05:00"));
     }
 
 }

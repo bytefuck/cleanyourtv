@@ -161,10 +161,11 @@ Things that bit us or contributors, so they don't bite you. Commands use `tools/
   and `pm install` hung, then failed with `INSTALL_FAILED_VERIFICATION_FAILURE`, while it targeted
   SDK 29. It targets 34 now; if you built an old checkout, rebuild.
 - **`pm install` fails with `INSTALL_FAILED_OLDER_SDK`** on a set older than the launcher: the APK's
-  `minSdk` is a compile-time floor, so a TV on Android 7.0/7.1 (SDK 24/25) cannot take the published
-  build at all ([#576](https://github.com/Gathin23/cleanyourtv/issues/576)). Read both numbers before
-  changing anything: `tools/tv.py 'getprop ro.build.version.sdk'` and
-  `grep minSdk launcher/app/build.gradle` (26, i.e. Android 8.0, at the time of writing).
+  `minSdk` is a compile-time floor, so a TV on Android 5.x or older (SDK below the launcher's floor)
+  cannot take the published build at all ([#576](https://github.com/Gathin23/cleanyourtv/issues/576)).
+  Read both numbers before changing anything: `tools/tv.py 'getprop ro.build.version.sdk'` and
+  `grep minSdk launcher/app/build.gradle` (23, i.e. Android 6.0, on this branch; upstream it is 26,
+  Android 8.0).
   `launcher/build-and-install.sh` now asks the TV first and stops with both numbers, so nothing is
   built or pushed for a set that will refuse it; `build-and-install.ps1` only reports it after
   `pm install`, which fails safely with the stock launcher untouched. Lowering `minSdk` is a source

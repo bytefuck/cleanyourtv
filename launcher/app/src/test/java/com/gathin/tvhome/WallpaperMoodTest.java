@@ -4,8 +4,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -14,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 import org.junit.Test;
 
@@ -39,15 +38,15 @@ public class WallpaperMoodTest {
 
     @Test
     public void sunComesFromTheConfiguredPlaceOrTheDefaults() {
-        LocalDate day = LocalDate.of(2026, 10, 22);
-        ZoneId zone = ZoneId.of("America/Los_Angeles");
+        Day day = Day.of(2026, 10, 22);
+        TimeZone zone = TimeZone.getTimeZone("America/Los_Angeles");
         assertArrayEquals(Sun.riseAndSet(day, 37.35, -121.98, zone), WallpaperMood.sun(day, "37.35", " -121.98 ", zone));
         int[] defaults = {WallpaperMood.DEFAULT_SUNRISE, WallpaperMood.DEFAULT_SUNSET};
         assertArrayEquals(defaults, WallpaperMood.sun(day, "", "", zone));
         assertArrayEquals(defaults, WallpaperMood.sun(day, "37.35", "", zone));
         assertArrayEquals(defaults, WallpaperMood.sun(day, "north", "-121.98", zone));
         // the sun does not set at the pole in June: the defaults
-        assertArrayEquals(defaults, WallpaperMood.sun(LocalDate.of(2026, 6, 21), "89.9", "0", ZoneId.of("UTC")));
+        assertArrayEquals(defaults, WallpaperMood.sun(Day.of(2026, 6, 21), "89.9", "0", TimeZone.getTimeZone("UTC")));
     }
 
     private static List<File> files(String... names) {

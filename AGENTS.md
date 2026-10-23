@@ -50,7 +50,7 @@ this file repeats their rules in the form an agent needs, and links to them for 
 - **Close ADB afterwards.** USB debugging and Network/ADB debugging off, authorisations revoked, reboot,
   then `tools/adb-closed.py <tv ip>` must report the port closed. Port 5555 is plaintext.
 - **Stop and say so** when the TV refuses: `pm disable-user` refused for every package, a sideload that
-  fails verification, or an SDK below the launcher's `minSdk` 26. Do not retry in a loop, and do not lower
+  fails verification, or an SDK below the launcher's `minSdk` 23. Do not retry in a loop, and do not lower
   `minSdk` or hand over an APK built elsewhere.
 
 The person's backups (`backup/`), screenshots (`shots/`), notes (`work/`) and the ADB key
@@ -69,7 +69,7 @@ share their TV's list afterwards, follow [`docs/workflows/tv-list.md`](docs/work
 | `CODE_OF_CONDUCT.md` | Includes the rule against publishing device identifiers, Wi-Fi names and IPs. |
 | `examples/` | One folder per tested TV model: `debloat.txt`, sometimes a `README.md` and a `config.json`. Indexed in `examples/README.md`. |
 | `docs/` | `docs/TROUBLESHOOTING.md`, the module-card contract (`docs/modules.md`), `docs/devices/` for models with notes but no tested list, and the [workflows](#workflows). |
-| `launcher/` | The reference launcher, package `com.gathin.tvhome`: plain Java, AndroidX RecyclerView and DynamicAnimation, `minSdk` 26, no `INTERNET` permission. |
+| `launcher/` | The reference launcher, package `com.gathin.tvhome`: plain Java, AndroidX RecyclerView and DynamicAnimation, `minSdk` 23, no `INTERNET` permission. |
 | `themes/` | One folder per theme: `config.json`, a required `screenshot.jpg`, optional wallpapers. Keys are documented in `themes/README.md`. |
 | `addons/` | Optional module-card apps, each its own Gradle project, never built into the launcher. |
 | `tools/` | The ADB client (`tv.py`) and the scripts, listed in the README's Tools table. Shell scripts have PowerShell twins. Each script's usage is in its first lines, and the larger ones have a guide beside them (`tools/*.md`): read it before running the script. |
@@ -150,7 +150,7 @@ Never do these in a PR:
   workflow that builds or publishes releases is closed.
 - **No root, no getting around app-store protection, no private builds** others cannot reproduce from this repo.
 - **No extras added to the PROMPT flow** beyond debloating and the launcher.
-- **Don't relax `minSdk`** (26) or the launcher's permissions; those are forks for `SHOWCASE.md`.
+- **Don't relax `minSdk`** (23) or the launcher's permissions; those are forks for `SHOWCASE.md`.
 - **Blur or crop** Wi-Fi names, people's names and cities (the top bar, a theme's `greeting_name`) before a
   screenshot goes anywhere public. No TV Settings screenshots that show accounts, emails or device names.
   From `tools/tv.py --probe`, `getprop` and backups, quote only the model, Android version and firmware build.

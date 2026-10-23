@@ -17,15 +17,14 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.io.File;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -58,7 +57,7 @@ final class WallpaperPlayer {
     private final Map<String, Set<String>> moods;
     /** config.xml latitude and longitude for the sun's times, and today's {sunrise, sunset} once worked out. */
     private final String latitude, longitude;
-    private LocalDate sunDay;
+    private Day sunDay;
     private int[] sun;
 
     WallpaperPlayer(Context context, FrameLayout root, Config config) {
@@ -138,12 +137,13 @@ final class WallpaperPlayer {
     /** The pictures the rotation picks from now: wallpaper_moods' group for the time of day, or the whole collection. */
     private List<File> playable() {
         if (moods.isEmpty()) return files;
-        LocalDateTime now = LocalDateTime.now();
-        if (!now.toLocalDate().equals(sunDay)) {
-            sunDay = now.toLocalDate();
-            sun = WallpaperMood.sun(sunDay, latitude, longitude, ZoneId.systemDefault());
+        Calendar now = Calendar.getInstance();
+        Day today = Day.of(now.get(Calendar.YEAR), now.get(Calendar.MONTH) + 1, now.get(Calendar.DAY_OF_MONTH));
+        if (!today.equals(sunDay)) {
+            sunDay = today;
+            sun = WallpaperMood.sun(sunDay, latitude, longitude, TimeZone.getDefault());
         }
-        return WallpaperMood.select(files, moods, WallpaperMood.timeOfDay(now.getHour() * 60 + now.getMinute(), sun[0], sun[1]));
+        return WallpaperMood.select(files, moods, WallpaperMood.timeOfDay(now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE), sun[0], sun[1]));
     }
 
     void close() {
