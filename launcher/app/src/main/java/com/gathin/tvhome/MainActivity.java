@@ -269,6 +269,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private int firstFocusTries;
     /** The dock's first park of a process jumps instead of scrolling (see onTileFocused). */
     private boolean firstDockPark = true;
+    /** The pill icons' focus-following colour list (Android 6 tint workaround, see onCreate). */
+    private android.content.res.ColorStateList pillIconTint;
     /** top_apps (config.xml or a theme): icon-only shortcut pills beside Settings, in the top bar. */
     private final List<TextView> topAppPills = new ArrayList<>();
     /** dock_apps as loaded (config.xml or a theme): a saved Order only applies while these are unchanged. */
@@ -732,15 +734,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == leftButton;
             return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
         };
-        // android:drawableTint from the style does not follow the focus state on Android 6, so a
-        // focused pill keeps its white icon on the now-white background; tinting the icon's own
-        // drawable with the pill's colour list follows the state everywhere.
-        android.content.res.ColorStateList pillTint = getResources().getColorStateList(R.drawable.pill_text);
+        // android:drawableTint from the style does not follow the focus state on Android 6, and neither
+        // does the view-level tint list, so a focused pill keeps its white icon on the now-white
+        // background. Tinting each icon's own drawable does follow; the network pill swaps its icon
+        // for the signal and Ethernet states, so it re-tints on every swap (updateWifiLabel).
+        pillIconTint = getResources().getColorStateList(R.drawable.pill_text);
         for (TextView pill : new TextView[]{(TextView) btnInputs, btnWifi, (TextView) btnSettings,
                 (TextView) btnReorder, (TextView) btnLibraryTop}) {
-            tintPillIcon(pill, pillTint);
+            tintPillIcon(pill, pillIconTint);
         }
-        for (TextView pill : topAppPills) tintPillIcon(pill, pillTint);
+        for (TextView pill : topAppPills) tintPillIcon(pill, pillIconTint);
         btnInputs.setOnKeyListener(pillKeys);
         btnWifi.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
@@ -2584,6 +2587,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (icon != wifiIcon) {
                 wifiIcon = icon;
                 btnWifi.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, 0, 0, 0);
+                tintPillIcon(btnWifi, pillIconTint);   // the fresh instance lost the focus-following tint
             }
             ColorStateList tint = online ? wifiOnlineTint : wifiPlainTint;
             if (wifiOnlineTint != null && btnWifi.getCompoundDrawableTintList() != tint) {
