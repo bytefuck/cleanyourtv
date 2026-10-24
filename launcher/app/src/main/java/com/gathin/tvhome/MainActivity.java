@@ -668,8 +668,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (component == null) continue;   // not installed, or no entry point to open
             try {
                 Drawable icon = getPackageManager().getActivityIcon(component);
-                CharSequence label = getPackageManager().getApplicationLabel(
-                        getPackageManager().getApplicationInfo(component.getPackageName(), 0));
+                String pkg = component.getPackageName();
+                CharSequence label = cfg.appLabels.containsKey(pkg) ? cfg.appLabels.get(pkg)
+                        : getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(pkg, 0));
                 TextView pill = new TextView(new ContextThemeWrapper(this, R.style.TopButtonIcon));
                 // The style's 42dp circle, set here too: a programmatic LayoutParams overrides XML style sizes.
                 LinearLayout.LayoutParams pillLayout = new LinearLayout.LayoutParams(

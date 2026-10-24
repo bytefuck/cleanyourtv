@@ -29,6 +29,7 @@
          declares no standard launch category - MiTV's own apps, which only open by component. -->
     <string-array name="top_apps" translatable="false">
         <item>com.xiaomi.mitv.appstore/.MainActivity</item>
+        <item>com.xiaomi.mitv.tvplayer/.dtmb.DTMBActivity</item>
     </string-array>
     <!-- With fewer dock_apps than columns (or a dock app that is not installed), the free dock slots take
          the first grid apps, so the dock never shows a gap. false leaves them empty (#162); a theme can
@@ -71,6 +72,8 @@
 
     <!-- A tile's name instead of the app's own: "package=Name". It also shows above the dock. -->
     <string-array name="app_labels">
+        <!-- The DTMB player's own name is "模拟电视"; "电视" reads better on a one-icon pill. -->
+        <item>com.xiaomi.mitv.tvplayer=电视</item>
     </string-array>
     <!-- A tile's artwork instead of the app's banner: "package=drawable", a banner_* drawable bundled with the
          launcher (res/drawable). banner_tv is a magenta field with the Live TV glyph. -->
