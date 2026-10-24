@@ -667,8 +667,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
             if (component == null) continue;   // not installed, or no entry point to open
             try {
-                Drawable icon = getPackageManager().getActivityIcon(component);
                 String pkg = component.getPackageName();
+                // top_app_icons names one of the launcher's own white line icons, so a pill matches
+                // the Settings and network pills; without it the app's own icon shows.
+                Drawable icon = null;
+                String iconName = cfg.topAppIcons.get(pkg);
+                if (iconName != null) {
+                    int res = topPillIcon(iconName);
+                    if (res != 0) icon = getResources().getDrawable(res, getTheme());
+                }
+                if (icon == null) icon = getPackageManager().getActivityIcon(component);
                 CharSequence label = cfg.appLabels.containsKey(pkg) ? cfg.appLabels.get(pkg)
                         : getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(pkg, 0));
                 TextView pill = new TextView(new ContextThemeWrapper(this, R.style.TopButtonIcon));
@@ -2556,6 +2564,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean libraryFromTopBar;
 
     /** Turns a labelled top pill into the round TopButtonIcon shape: no text, the icon centred by even padding. */
+    /** One of the launcher's own white line icons for a top_apps pill (top_app_icons), or 0 for none. */
+    private static int topPillIcon(String name) {
+        switch (name) {
+            case "ic_store": return R.drawable.ic_store;
+            case "ic_livetv": return R.drawable.ic_livetv;
+            case "ic_apps": return R.drawable.ic_apps;
+            case "ic_settings": return R.drawable.ic_settings;
+            case "ic_wifi": return R.drawable.ic_wifi;
+            case "ic_input": return R.drawable.ic_input;
+            case "ic_ethernet": return R.drawable.ic_ethernet;
+            default: return 0;
+        }
+    }
+
     private void makeIconOnly(TextView pill) {
         pill.setContentDescription(pill.getText());
         pill.setText(null);

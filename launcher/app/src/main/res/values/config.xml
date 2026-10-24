@@ -31,6 +31,14 @@
         <item>com.xiaomi.mitv.appstore/.MainActivity</item>
         <item>com.xiaomi.mitv.tvplayer/.dtmb.DTMBActivity</item>
     </string-array>
+
+    <!-- Icons for the top_apps pills, in the launcher's own white line style: "package=icon name",
+         one of the launcher's ic_* drawables (ic_store, ic_livetv, ic_apps, ...). A package without
+         an entry shows its own activity icon. -->
+    <string-array name="top_app_icons" translatable="false">
+        <item>com.xiaomi.mitv.appstore=ic_store</item>
+        <item>com.xiaomi.mitv.tvplayer=ic_livetv</item>
+    </string-array>
     <!-- With fewer dock_apps than columns (or a dock app that is not installed), the free dock slots take
          the first grid apps, so the dock never shows a gap. false leaves them empty (#162); a theme can
          set "fill_dock": false. -->

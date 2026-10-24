@@ -64,6 +64,8 @@ final class Config {
     final List<String> libraryApps;
     /** Shortcuts in the top bar beside Settings (config.xml top_apps): packages or "pkg/.Activity". */
     final List<String> topApps;
+    /** Icon override for a top_apps pill: package to one of the launcher's own ic_* drawables. */
+    final Map<String, String> topAppIcons;
     final String liveTvPackage;
     final String liveTvAction;
     final String liveTvInputId;
@@ -209,7 +211,7 @@ final class Config {
     /** Hold OK on a tile opens a menu (Move, Remove from Home, App info) instead of App info (config.xml / theme tile_menu). */
     final boolean tileMenu;
 
-    private Config(List<String> dockApps, boolean fillDock, List<String> hiddenApps, List<String> libraryApps, List<String> topApps, String liveTvPackage,
+    private Config(List<String> dockApps, boolean fillDock, List<String> hiddenApps, List<String> libraryApps, List<String> topApps, Map<String, String> topAppIcons, String liveTvPackage,
                    String liveTvAction, String liveTvInputId, Map<String, String> launchActions, Map<String, String> appLabels,
                    Map<String, String> appBanners, String sourcePanelService, String sourcePanelAction,
                    String sourcePanelExtra, boolean coocaaSources, String inputAction,
@@ -234,6 +236,7 @@ final class Config {
         this.hiddenApps = Collections.unmodifiableList(hiddenApps);
         this.libraryApps = Collections.unmodifiableList(libraryApps);
         this.topApps = Collections.unmodifiableList(topApps);
+        this.topAppIcons = Collections.unmodifiableMap(topAppIcons);
         this.liveTvPackage = liveTvPackage;
         this.liveTvAction = liveTvAction;
         this.liveTvInputId = liveTvInputId;
@@ -324,6 +327,7 @@ final class Config {
         List<String> hidden = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.hidden_apps)));
         List<String> libraryApps = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.library_apps)));
         List<String> topApps = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.top_apps)));
+        List<String> topAppIcons = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.top_app_icons)));
         String liveTv = res.getString(R.string.live_tv_package).trim();
         String liveTvAction = res.getString(R.string.live_tv_action).trim();
         String liveTvInputId = res.getString(R.string.live_tv_input_id).trim();
@@ -404,6 +408,7 @@ final class Config {
             hidden = stringList(json, "hidden_apps", hidden);
             libraryApps = stringList(json, "library_apps", libraryApps);
             topApps = stringList(json, "top_apps", topApps);
+            topAppIcons = stringList(json, "top_app_icons", topAppIcons);
             liveTv = string(json, "live_tv_package", liveTv);
             liveTvAction = string(json, "live_tv_action", liveTvAction);
             liveTvInputId = string(json, "live_tv_input_id", liveTvInputId);
@@ -517,7 +522,7 @@ final class Config {
         Festival festival = json == null ? Festival.NONE : Festival.parse(string(json, "festival", ""),
                 string(json, "festival_until", ""), string(json, "greeting", ""), string(json, "accent_color", ""));
 
-        return new Config(dock, fillDock, hidden, libraryApps, topApps, liveTv, liveTvAction, liveTvInputId, packageMap(launchActions), packageMap(appLabels),
+        return new Config(dock, fillDock, hidden, libraryApps, topApps, packageMap(topAppIcons), liveTv, liveTvAction, liveTvInputId, packageMap(launchActions), packageMap(appLabels),
                 packageMap(appBanners), panelService,
                 panelAction, panelExtra, coocaaSources, inputAction, inputUriScheme,
                 Math.max(1, columns), Math.max(0, rowsBelow), animations, advancedEffects,
