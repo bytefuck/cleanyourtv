@@ -264,6 +264,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** fill_dock false: how many dock slots held an app when reorder mode started. */
     private int dockedAtStart;
     private View btnReorder;
+    /** Cold start: focus has not landed on a tile yet (see ensureFirstFocus). */
+    private boolean firstFocusPending = true;
+    private int firstFocusTries;
+    /** The dock's first park of a process jumps instead of scrolling (see onTileFocused). */
+    private boolean firstDockPark = true;
     /** top_apps (config.xml or a theme): icon-only shortcut pills beside Settings, in the top bar. */
     private final List<TextView> topAppPills = new ArrayList<>();
     /** dock_apps as loaded (config.xml or a theme): a saved Order only applies while these are unchanged. */
@@ -556,7 +561,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
             // Cold start or column count > 4: the first focus can run before the grid has its final width or
             // padding, leaving the glass at the XML design size until a key is pressed.
-            grid.post(this::refitGlass);
+            grid.post(this::ensureFirstFocus);
         });
 
         // Keep the glass glued to its tile while the grid scrolls.
@@ -1220,6 +1225,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        firstFocusPending = false;   // the owner is driving; the cold-start focus fallback must not steal it
         if (handleSettingsKey(event)) return true;
         if (tileMenuEnabled && !reordering && openPopup == null && cardPrompt == null
                 && event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
@@ -1636,9 +1642,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // actually off; reduced motion does it in one jump so it does not fight the highlight.
             boolean scroll = Math.abs(dy) > (int) (8 * density);
             if (scroll) {
-                if (!animations || reducedMotion) grid.scrollBy(0, dy);
+                // The first park of a cold start jumps: the smooth scroll can be interrupted by the
+                // tiles' entrance layout pass and stop short, leaving the dock row (glass and all)
+                // sitting too high until the first key press.
+                if (!animations || reducedMotion || firstDockPark) grid.scrollBy(0, dy);
                 else grid.smoothScrollBy(0, dy);
             }
+            firstDockPark = false;
             showHero(position, scroll ? r.top - dy : r.top);
         } else {
             // Below the dock (or in a plain grid) the glow follows the tile without the big name; letting it
@@ -1651,6 +1661,32 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /** Refits the glass to the focused holder once the grid layout and tile dimensions settle. */
+    /**
+     * Cold start: make sure focus lands on a tile once the grid has holders. On a slow set the restore
+     * post can run before the first holder is bound and focusTile finds nothing, leaving Home without
+     * focus: the glass never shows and the dock row stays unparked, which reads as a stray block above
+     * the first dock app until the first key press. Retries briefly; any key of the owner's cancels it.
+     */
+    private void ensureFirstFocus() {
+        if (!firstFocusPending) {
+            refitGlass();
+            return;
+        }
+        if (isFinishing() || ++firstFocusTries > 25) {
+            firstFocusPending = false;
+            refitGlass();
+            return;
+        }
+        int pos = Math.max(0, Math.min(lastFocused, adapter.appCount() - 1));
+        if (adapter.appCount() == 0 || grid.findViewHolderForAdapterPosition(pos) == null) {
+            grid.postDelayed(this::ensureFirstFocus, 120);
+            return;
+        }
+        firstFocusPending = false;
+        if (!grid.hasFocus()) focusTile(pos);
+        refitGlass();
+    }
+
     private void refitGlass() {
         if (isDestroyed() || adapter.appCount() == 0 || libraryFocusPending) return;
         int pos = Math.max(0, Math.min(lastFocused, adapter.appCount() - 1));
