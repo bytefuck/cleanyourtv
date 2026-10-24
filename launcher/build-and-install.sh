@@ -11,7 +11,7 @@ export MSYS_NO_PATHCONV=1
 # spent a minute building and b64push has pushed the APK to the TV (#576). Ask the TV first. The
 # number comes from the build file, so it follows the launcher instead of a hard-coded copy here.
 MIN_SDK=$(sed -n 's/^[[:space:]]*minSdk[[:space:]][[:space:]]*\([0-9]\{1,3\}\)[[:space:]]*$/\1/p' app/build.gradle 2>/dev/null | head -n 1 || true)
-TV_SDK=$("$PY" -I "$TOOLS/tv.py" 'getprop ro.build.version.sdk' 2>/dev/null | tr -dc '0-9' || true)
+TV_SDK=$("$PY" -I ../tools/tv.py 'getprop ro.build.version.sdk' 2>/dev/null | tr -dc '0-9' || true)
 if [ -n "$MIN_SDK" ] && [ -n "$TV_SDK" ] && [ "$TV_SDK" -lt "$MIN_SDK" ]; then
   echo "ERROR: this TV runs SDK $TV_SDK and the launcher is built with minSdk $MIN_SDK (app/build.gradle)," >&2
   echo "so pm install would answer INSTALL_FAILED_OLDER_SDK. Nothing was built, pushed or disabled." >&2
@@ -110,7 +110,7 @@ fi
 echo "Stock launcher: $STOCK_LAUNCHER"
 HOME_QUERY='cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME'
 if [ "$STOCK_LAUNCHER" = none ]; then DISABLE_STOCK="echo stock launcher left alone"
-else DISABLE_STOCK="pm disable-user --user 0 $STOCK_LAUNCHER"; fi
+else DISABLE_STOCK="pm disable-user --user 0 $STOCK_LAUNCHER 2>/dev/null || pm hide $STOCK_LAUNCHER"; fi
 APK=app/build/outputs/apk/release/app-release.apk
 "$PY" -I ../tools/b64push.py "$APK" /data/local/tmp/tvhome.apk
 # Install on its own: in the batch below a failed install (e.g. "not enough space" on a full /data)
@@ -169,7 +169,7 @@ rollback_home() {
     echo "ERROR: Home is not the new launcher, and no stock launcher was disabled; nothing to roll back." >&2
     return 1
   fi
-  "$PY" -I ../tools/tv.py "pm enable --user 0 $STOCK_LAUNCHER" >/dev/null 2>&1 || true
+  "$PY" -I ../tools/tv.py "pm enable --user 0 $STOCK_LAUNCHER; pm unhide $STOCK_LAUNCHER" >/dev/null 2>&1 || true
   # set-home-activity needs pkg/activity on Android 9, so resolve the component on the TV first.
   "$PY" -I ../tools/tv.py "cmd package set-home-activity --user 0 \$(cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME $STOCK_LAUNCHER | tail -n 1)" >/dev/null 2>&1 || true
   BACK=$(query_home)
@@ -179,7 +179,7 @@ rollback_home() {
   REC="${HOME:-$PWD}/cleanyourtv-handover-$(printf '%s' "$TV_HOST" | tr -c 'A-Za-z0-9._-' '_').txt"
   {
     echo "# cleanyourtv: the launcher handover on $TV_HOST did not finish. From the repo root:"
-    echo "TV_HOST=$TV_HOST tools/tv.py 'pm enable --user 0 $STOCK_LAUNCHER'"
+    echo "TV_HOST=$TV_HOST tools/tv.py 'pm enable --user 0 $STOCK_LAUNCHER; pm unhide $STOCK_LAUNCHER'"
     echo "TV_HOST=$TV_HOST tools/tv.py 'cmd package set-home-activity --user 0 \$(cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME $STOCK_LAUNCHER | tail -n 1)'"
     echo "# then check: TV_HOST=$TV_HOST tools/tv.py '$HOME_QUERY'"
   } > "$REC" 2>/dev/null || REC=""
