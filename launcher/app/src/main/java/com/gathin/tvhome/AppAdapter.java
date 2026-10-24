@@ -74,6 +74,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final String name;
         /** Ambient glow colour; 0 until sampled from the banner, or the card's accent from the start. */
         int ambient;
+        /** A dock_apps "pkg/.Activity" entry: pinned to the dock by the config, so a saved order
+         *  cannot pull it out of the row the owner asked for. */
+        boolean pinned;
 
         Entry(String label, ComponentName component, Drawable banner, Drawable icon) {
             this(APP, label, component, banner, icon, null, 0);
@@ -184,6 +187,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final boolean cinematic;
     /** Dock order (config.xml dock_apps, or a theme's config.json). */
     private final List<String> favourites;
+    /** The same entries as package names ("pkg/.Activity" becomes "pkg"): matching and dock membership
+     *  work on the package, the component form only names the entry point. */
+    private final List<String> favouritePkgs;
     /** Grid apps fill the dock slots dock_apps leaves free (config.xml, fill_dock). */
     private final boolean fillDock;
     /** Dock apps found at the last reload, and the empty slots after them. */
@@ -215,6 +221,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.listener = listener;
         this.dockSize = dockSize;
         this.favourites = cfg.dockApps;
+        List<String> pkgs = new ArrayList<>(cfg.dockApps.size());
+        for (String entry : cfg.dockApps) pkgs.add(entry.contains("/") ? entry.substring(0, entry.indexOf('/')) : entry);
+        this.favouritePkgs = pkgs;
         this.fillDock = cfg.fillDock;
         this.hidden = new HashSet<>(cfg.hiddenApps);
         this.libraryPreload = new HashSet<>(cfg.libraryApps);
@@ -268,6 +277,27 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // Some system apps declare two leanback entry points under one name (Sony's Timers & Clock on the
         // BRAVIA VU31), which would show as two identical tiles: keep the first per package and label.
         Set<String> seen = new HashSet<>();
+        // A dock_apps entry that names a component ("pkg/.Activity") becomes its tile without a query:
+        // China-market firmware often starts its own apps by component only, with no LAUNCHER or leanback
+        // category declared (MiTV's app store), so no query would ever list them. The launch in launch()
+        // already opens tiles by explicit component, with the plain MAIN intent a phone-style app gets.
+        for (String favourite : favourites) {
+            if (!favourite.contains("/")) continue;
+            ComponentName component = ComponentName.unflattenFromString(favourite);
+            String pkg = component == null ? "" : component.getPackageName();
+            if (pkg.isEmpty() || pkg.equals(ctx.getPackageName()) || hidden.contains(pkg)) continue;
+            try {
+                String label = Cards.cleanLabel(
+                        appLabels.containsKey(pkg) ? appLabels.get(pkg)
+                                : String.valueOf(pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0))), pkg);
+                if (!seen.add(pkg + '\n' + label)) continue;
+                Entry pinnedTile = new Entry(label, component, null, pm.getActivityIcon(component));
+                pinnedTile.pinned = true;
+                fresh.add(pinnedTile);
+            } catch (PackageManager.NameNotFoundException ignored) {
+                // not installed, or that activity is gone: no tile for the entry
+            }
+        }
         for (ResolveInfo ri : found) {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
@@ -296,7 +326,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // The owner's own order first; tiles it does not know (new installs) follow by the rule below.
             int saved = Order.compare(savedRanks, a.component.flattenToShortString(), b.component.flattenToShortString());
             if (saved != 0) return saved;
-            int fa = favourites.indexOf(a.pkg), fb = favourites.indexOf(b.pkg);
+            int fa = favouritePkgs.indexOf(a.pkg), fb = favouritePkgs.indexOf(b.pkg);
             if (fa >= 0 || fb >= 0) {
                 if (fa < 0) return 1;
                 if (fb < 0) return -1;
@@ -530,7 +560,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
      * the owner moved into the dock stays there (#499); else a dock_apps entry.
      */
     private boolean isDocked(Entry e) {
-        if (savedDocked < 0) return favourites.contains(e.pkg);
+        if (e.pinned) return true;
+        if (savedDocked < 0) return favouritePkgs.contains(e.pkg);
         Integer rank = savedRanks.get(e.component.flattenToShortString());
         return rank != null && rank < savedDocked;
     }

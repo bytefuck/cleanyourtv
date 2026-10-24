@@ -16,11 +16,13 @@
     </string-array>
 
     <!-- Apps pinned to the dock row at the bottom, in this order. Missing apps are skipped. -->
+    <!-- This fork's TV: a MiTV4-ANSM0 (Android 6) with iQiyi as its one TV app. MiTV's own apps declare
+         no standard launch category, so the app store is pinned by component; the TV manager resolves
+         through the plain LAUNCHER query the library uses. -->
     <string-array name="dock_apps">
-        <item>com.netflix.ninja</item>
-        <item>com.amazon.amazonvideo.livingroom</item>
-        <item>com.google.android.youtube.tv</item>
-        <item>in.startv.hotstar</item>
+        <item>com.xiaomi.mitv.appstore/.MainActivity</item>
+        <item>com.gitvdemo.video</item>
+        <item>com.xiaomi.mitv.tvmanager</item>
     </string-array>
     <!-- With fewer dock_apps than columns (or a dock app that is not installed), the free dock slots take
          the first grid apps, so the dock never shows a gap. false leaves them empty (#162); a theme can
