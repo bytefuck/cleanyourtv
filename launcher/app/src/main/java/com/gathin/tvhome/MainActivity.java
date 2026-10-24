@@ -54,6 +54,7 @@ import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
 import android.util.TypedValue;
+import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -263,6 +264,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** fill_dock false: how many dock slots held an app when reorder mode started. */
     private int dockedAtStart;
     private View btnReorder;
+    /** top_apps (config.xml or a theme): icon-only shortcut pills beside Settings, in the top bar. */
+    private final List<TextView> topAppPills = new ArrayList<>();
     /** dock_apps as loaded (config.xml or a theme): a saved Order only applies while these are unchanged. */
     private List<String> dockApps;
     /** fill_dock false: the dock can have empty slots, which reorder mode leaves out and restores afterwards. */
@@ -653,6 +656,46 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             makeIconOnly((TextView) btnSettings);
         }
         if (cfg.iconOnlyInputs) makeIconOnly((TextView) btnInputs);
+        // top_apps: an icon-only pill beside Settings for each entry, one press away. Entries are packages
+        // or "pkg/.Activity" for apps whose entry declares no launch category (MiTV's app store here).
+        LinearLayout topBar = findViewById(R.id.topButtons);
+        for (String entry : cfg.topApps) {
+            ComponentName component = entry.contains("/") ? ComponentName.unflattenFromString(entry) : null;
+            if (component == null) {
+                Intent launch = getPackageManager().getLaunchIntentForPackage(entry);
+                component = launch != null ? launch.getComponent() : null;
+            }
+            if (component == null) continue;   // not installed, or no entry point to open
+            try {
+                Drawable icon = getPackageManager().getActivityIcon(component);
+                CharSequence label = getPackageManager().getApplicationLabel(
+                        getPackageManager().getApplicationInfo(component.getPackageName(), 0));
+                TextView pill = new TextView(new ContextThemeWrapper(this, R.style.TopButtonIcon));
+                // The style's 42dp circle, set here too: a programmatic LayoutParams overrides XML style sizes.
+                LinearLayout.LayoutParams pillLayout = new LinearLayout.LayoutParams(
+                        Math.round(42 * density), Math.round(42 * density));
+                pillLayout.gravity = Gravity.CENTER_VERTICAL;
+                pill.setLayoutParams(pillLayout);
+                int iconSize = Math.round(22 * density);
+                icon.setBounds(0, 0, iconSize, iconSize);
+                pill.setCompoundDrawablesRelative(icon, null, null, null);
+                pill.setContentDescription(label);
+                pill.setNextFocusDownId(R.id.grid);
+                final ComponentName open = component;
+                pill.setOnClickListener(v -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_MAIN).setComponent(open)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED));
+                    } catch (Exception ex) {
+                        Toast.makeText(this, getString(R.string.cant_open, label), Toast.LENGTH_SHORT).show();
+                    }
+                });
+                topBar.addView(pill, topBar.indexOfChild(btnSettings));
+                topAppPills.add(pill);
+            } catch (PackageManager.NameNotFoundException ignored) {
+                // not installed: no pill for the entry
+            }
+        }
         btnSettings.setOnLongClickListener(v -> {
             showSettingsMenu();
             return true;
@@ -680,9 +723,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnSettings.setOnKeyListener(pillKeys);
         btnReorder.setOnKeyListener(pillKeys);
         btnLibraryTop.setOnKeyListener(pillKeys);
+        for (TextView pill : topAppPills) pill.setOnKeyListener(pillKeys);
         if (advancedEffects) {
             for (View button : new View[]{btnInputs, btnWifi, btnReorder, btnLibraryTop, btnSettings}) {
                 button.setOnFocusChangeListener((view, focused) -> view.animate()
+                        .scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
+                        .setDuration(reducedMotion ? Motion.REDUCED_MS : 160).start());
+            }
+            for (View pill : topAppPills) {
+                pill.setOnFocusChangeListener((view, focused) -> view.animate()
                         .scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
                         .setDuration(reducedMotion ? Motion.REDUCED_MS : 160).start());
             }
@@ -2164,10 +2213,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         hideHero();
     }
 
-    /** The first top-bar button after Inputs that is shown: the network pill, Reorder, then Settings (always there). */
+    /** The first top-bar button after Inputs that is shown: the network pill, Reorder, a top_apps pill, then Settings. */
     private View firstTopButton() {
         if (btnWifi.getVisibility() == View.VISIBLE) return btnWifi;
         if (btnReorder.getVisibility() == View.VISIBLE) return btnReorder;
+        if (!topAppPills.isEmpty() && topAppPills.get(0).isShown()) return topAppPills.get(0);
         return findViewById(R.id.btnSettings);
     }
 

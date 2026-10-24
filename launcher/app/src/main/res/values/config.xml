@@ -20,9 +20,15 @@
          no standard launch category, so the app store is pinned by component; the TV manager resolves
          through the plain LAUNCHER query the library uses. -->
     <string-array name="dock_apps">
-        <item>com.xiaomi.mitv.appstore/.MainActivity</item>
         <item>com.gitvdemo.video</item>
         <item>com.xiaomi.mitv.tvmanager</item>
+    </string-array>
+
+    <!-- Shortcuts in the top bar, as icon-only pills beside Settings (config.xml top_apps, or a theme's
+         config.json "top_apps"). Entries are packages, or "pkg/.Activity" for apps whose entry point
+         declares no standard launch category - MiTV's own apps, which only open by component. -->
+    <string-array name="top_apps" translatable="false">
+        <item>com.xiaomi.mitv.appstore/.MainActivity</item>
     </string-array>
     <!-- With fewer dock_apps than columns (or a dock app that is not installed), the free dock slots take
          the first grid apps, so the dock never shows a gap. false leaves them empty (#162); a theme can
