@@ -732,6 +732,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == leftButton;
             return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
         };
+        // android:drawableTint from the style does not follow the focus state on Android 6, so a
+        // focused pill keeps its white icon on the now-white background; tinting the icon's own
+        // drawable with the pill's colour list follows the state everywhere.
+        android.content.res.ColorStateList pillTint = getResources().getColorStateList(R.drawable.pill_text);
+        for (TextView pill : new TextView[]{(TextView) btnInputs, btnWifi, (TextView) btnSettings,
+                (TextView) btnReorder, (TextView) btnLibraryTop}) {
+            tintPillIcon(pill, pillTint);
+        }
+        for (TextView pill : topAppPills) tintPillIcon(pill, pillTint);
         btnInputs.setOnKeyListener(pillKeys);
         btnWifi.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
@@ -2612,6 +2621,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             case "ic_ethernet": return R.drawable.ic_ethernet;
             default: return 0;
         }
+    }
+
+    /** Tints a pill's leading icon with the pill text's colour list (Drawable.setTintList follows state). */
+    private static void tintPillIcon(TextView pill, android.content.res.ColorStateList tint) {
+        Drawable icon = pill.getCompoundDrawablesRelative()[0];
+        if (icon == null) return;
+        icon = icon.mutate();
+        icon.setTintList(tint);
+        pill.setCompoundDrawablesRelative(icon, null, null, null);
     }
 
     private void makeIconOnly(TextView pill) {
