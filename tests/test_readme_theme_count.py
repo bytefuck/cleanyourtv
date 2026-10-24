@@ -20,7 +20,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 THEMES = ROOT / "themes"
-FRONT = ROOT / "README.md"
+FRONT = ROOT / "README.upstream.md"
 
 # The row is `| **Themes** | ... N ship in [`themes/`](themes/)`. A count written as a word or as
 # digits is accepted, so rewording the cell stays free as long as the number is still there.

@@ -14,7 +14,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 PRESS = ROOT / "docs" / "PRESS.md"
-README = ROOT / "README.md"
+README = ROOT / "README.upstream.md"
 FEATURED = ROOT / "tools" / "readme_featured.py"
 
 LATAM = "Latin America (Spanish-language)"

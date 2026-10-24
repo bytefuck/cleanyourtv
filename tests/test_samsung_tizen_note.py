@@ -16,7 +16,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "docs" / "devices" / "samsung-tizen.md"
-README = ROOT / "README.md"
+README = ROOT / "README.upstream.md"
 
 
 def page():

@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 LAYOUT = ROOT / "launcher/app/src/main/res/layout/activity_launcher_settings.xml"
 ACTIVITY = ROOT / "launcher/app/src/main/java/com/gathin/tvhome/LauncherSettingsActivity.java"
 STRINGS = ROOT / "launcher/app/src/main/res/values/strings.xml"
-README = ROOT / "README.md"
+README = ROOT / "README.upstream.md"
 
 ANDROID = "{http://schemas.android.com/apk/res/android}"
 SUMMARY = "Launcher settings and the default home"

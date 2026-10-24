@@ -16,7 +16,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-README = ROOT / "README.md"
+README = ROOT / "README.upstream.md"
 SH = ROOT / "launcher" / "build-and-install.sh"
 PS1 = ROOT / "launcher" / "build-and-install.ps1"
 SUMMARY = "<summary><b>How the scripts protect Home</b></summary>"

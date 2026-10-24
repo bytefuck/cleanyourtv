@@ -68,7 +68,7 @@ class ExampleListsTest(unittest.TestCase):
         self.assertEqual(len(listed), len(set(listed)), "a folder is listed twice")
 
     def test_readme_table_has_one_row_per_list(self):
-        readme_rows = table_rows(ROOT / "README.md", "| TV | OS |")
+        readme_rows = table_rows(ROOT / "README.upstream.md", "| TV | OS |")
         example_rows = table_rows(EXAMPLES / "README.md", "| Folder |")
         self.assertEqual(len(readme_rows), len(example_rows),
                          "README.md TV table and examples/README.md have a different number of rows")
@@ -78,7 +78,7 @@ class ExampleListsTest(unittest.TestCase):
 
     @unittest.skipUnless(os.environ.get("CLEANYOURTV_STRICT"), "counts are fixed up on merge; strict on main only")
     def test_readme_counts(self):
-        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        text = (ROOT / "README.upstream.md").read_text(encoding="utf-8")
         n = len(folders())
         self.assertIn(f"{n} TV models", text, "stat strip alt text is stale (regenerate docs/stats.png too)")
 

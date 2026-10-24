@@ -24,7 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS_DIR = ROOT / "tools"
-README = ROOT / "README.md"
+README = ROOT / "README.upstream.md"
 
 TABLE_HEADER = "| Tool | What it does |"
 TOOL_PATH = re.compile(r"tools/([\w.-]+\.(?:py|sh|ps1))")

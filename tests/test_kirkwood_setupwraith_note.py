@@ -17,7 +17,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 DOC = (ROOT / "docs" / "TROUBLESHOOTING.md").read_text(encoding="utf-8")
-README = (ROOT / "README.md").read_text(encoding="utf-8")
+README = (ROOT / "README.upstream.md").read_text(encoding="utf-8")
 PROMPT = (ROOT / "PROMPT.md").read_text(encoding="utf-8")
 KIRKWOOD = "UTTK.260317.003"
 

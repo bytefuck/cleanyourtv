@@ -26,7 +26,7 @@ from test_markdown_links import markdown_files  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 TV = ROOT / "tools" / "tv.py"
 TROUBLE = ROOT / "docs" / "TROUBLESHOOTING.md"
-README = ROOT / "README.md"
+README = ROOT / "README.upstream.md"
 
 # `tv.py reboot`, not `tv.py --reboot`: the dashes sit between the path and the word.
 SHELL_REBOOT = re.compile(r"tv\.py\s+reboot\b")

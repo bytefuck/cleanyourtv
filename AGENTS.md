@@ -117,7 +117,7 @@ use it and ends with the check to run.
 |---|---|
 | Tests, as CI runs them | `python3 -m unittest discover -s tests -v` after `python3 -m venv tools/venv` and `tools/venv/bin/pip install -r tools/requirements.txt`. On `main`, CI sets `CLEANYOURTV_STRICT=1`, which also checks the README's TV-model count. |
 | Launcher, if you touched `launcher/` | JDK 17, Android SDK platform 34, build-tools 34.0.0. In `launcher/`: `./gradlew --no-daemon testReleaseUnitTest lintRelease assembleRelease`. Lint must stay at zero errors. |
-| APK size gate | `launcher/app/build/outputs/apk/release/app-release.apk` must be under 491,520 B (480 KB). Linux: `stat -c %s`, macOS: `stat -f %z`. |
+| APK size gate | `launcher/app/build/outputs/apk/release/app-release.apk` must be under 503,808 B (492 KB). The extra 12 KB over the upstream gate is the v1 signature an Android 6 install requires. Linux: `stat -c %s`, macOS: `stat -f %z`. |
 | README rows | A new list has its row in `README.md` and `examples/README.md`; a theme in `themes/README.md`; an add-on in `addons/README.md`. |
 | One topic per PR | A TV list never rides inside a launcher feature PR. A device's list plus small fixes for that same device can be one PR. |
 | Tested on | Say which TV, Android version and firmware you tested on, in the PR template's "Tested on" line. |
