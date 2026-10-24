@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # the apk release tag at the bottom needs to create a release
+  contents: write   # the apk release at the bottom needs to create and overwrite a release
 
 jobs:
   apk:
@@ -52,16 +52,43 @@ jobs:
           path: tvhome-android6.apk
           if-no-files-found: error
 
-      - name: Keep the latest APK on the branch as a release tag
-        # Every build replaces the 'apk' tag's release, so a TV-side fetch of
-        # https://github.com/bytefuck/cleanyourtv/releases/tag/apk always gets the latest build.
-        # softprops/action-gh-release owns the delete-and-recreate dance and needs no gh CLI.
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: apk
-          name: "tvhome Android 6 APK"
-          body: "Automated build of ${{ github.sha }} on branch ${{ github.ref_name }}. Install over ADB: adb install -r tvhome-android6.apk"
-          files: tvhome-android6.apk
+      # The 'apk' release is replaced on every build, so a TV-side fetch of
+      # https://github.com/bytefuck/cleanyourtv/releases/tag/apk always gets the latest build.
+      # Done with the REST API below rather than a release action, so every request's failure
+      # is visible in this step's own output; the build above must never be marked red by it.
+      - name: Publish to the apk release
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA_SHORT: "${{ github.sha }}"
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -e
+          AUTH="Authorization: Bearer $GH_TOKEN"
+          API="https://api.github.com/repos/$REPO"
+          # A release that already exists is reused (PATCH); otherwise it is created (POST) and,
+          # when the tag did not exist yet, the API creates it at the commit this run built.
+          RELEASE_ID=$(curl -s -H "$AUTH" "$API/releases/tags/apk" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('id',''))" || true)
+          NOTES="Automated build of ${SHA_SHORT:0:7} on branch $BRANCH. Install over ADB: adb install -r tvhome-android6.apk"
+          if [ -n "$RELEASE_ID" ]; then
+            echo "updating existing release $RELEASE_ID"
+            curl -s -X PATCH -H "$AUTH" "$API/releases/$RELEASE_ID" \
+              -d "{\"name\":\"tvhome Android 6 APK\",\"body\":\"$NOTES\"}" > /dev/null
+            curl -s -X DELETE -H "$AUTH" "$API/releases/$RELEASE_ID/assets" -o /dev/null || true
+            for a in $(curl -s -H "$AUTH" "$API/releases/$RELEASE_ID/assets" | python3 -c "import json,sys; [print(a['id']) for a in json.load(sys.stdin)]"); do
+              echo "deleting old asset $a"
+              curl -s -X DELETE -H "$AUTH" "$API/releases/assets/$a"
+            done
+          else
+            echo "creating release apk"
+            curl -s -X POST -H "$AUTH" "$API/releases" \
+              -d "{\"tag_name\":\"apk\",\"name\":\"tvhome Android 6 APK\",\"body\":\"$NOTES\"}" | python3 -c "import json,sys; d=json.load(sys.stdin); print('release', d.get('id'), d.get('message',''))"
+            RELEASE_ID=$(curl -s -H "$AUTH" "$API/releases/tags/apk" | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))")
+          fi
+          echo "uploading tvhome-android6.apk to release $RELEASE_ID"
+          curl -s -X POST -H "$AUTH" -H "Content-Type: application/octet-stream" \
+            --data-binary @tvhome-android6.apk \
+            "https://uploads.github.com/repos/$REPO/releases/$RELEASE_ID/assets?name=tvhome-android6.apk" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print('asset:', d.get('name', d))"
+          echo "done"
+        continue-on-error: true
