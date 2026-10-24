@@ -63,6 +63,5 @@ jobs:
           name: "tvhome Android 6 APK"
           body: "Automated build of ${{ github.sha }} on branch ${{ github.ref_name }}. Install over ADB: adb install -r tvhome-android6.apk"
           files: tvhome-android6.apk
-          make_latest: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
