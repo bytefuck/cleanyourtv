@@ -53,16 +53,16 @@ jobs:
           if-no-files-found: error
 
       - name: Keep the latest APK on the branch as a release tag
-        # Every build replaces the 'apk' tag's release, so 电视上直接拉 latest always works:
-        #   https://github.com/bytefuck/cleanyourtv/releases/tag/apk
+        # Every build replaces the 'apk' tag's release, so a TV-side fetch of
+        # https://github.com/bytefuck/cleanyourtv/releases/tag/apk always gets the latest build.
+        # softprops/action-gh-release owns the delete-and-recreate dance and needs no gh CLI.
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        run: |
-          gh release delete apk --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag 2>/dev/null || true
-          gh release create apk tvhome-android6.apk \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "tvhome Android 6 APK" \
-            --notes "Automated build of ${GITHUB_SHA::7} on branch ${GITHUB_REF_NAME}.
-          Install over ADB: adb install -r tvhome-android6.apk"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk
+          name: "tvhome Android 6 APK"
+          body: "Automated build of ${{ github.sha }} on branch ${{ github.ref_name }}. Install over ADB: adb install -r tvhome-android6.apk"
+          files: tvhome-android6.apk
+          make_latest: true
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
