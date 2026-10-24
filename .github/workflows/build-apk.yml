@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # the apk release tag at the bottom needs to create a release
 
 jobs:
   apk:
