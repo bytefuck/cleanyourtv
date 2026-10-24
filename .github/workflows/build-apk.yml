@@ -1,0 +1,68 @@
+name: Build launcher APK
+
+on:
+  push:
+    branches: [main, android6-minsdk23]
+    paths:
+      - "launcher/**"
+      - ".github/workflows/build-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    name: Assemble the launcher APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platforms;android-34 build-tools;34.0.0
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Assemble the release APK
+        working-directory: launcher
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+
+      - name: Report the APK size
+        run: |
+          size=$(stat -c %s launcher/app/build/outputs/apk/release/app-release.apk)
+          echo "release APK: $((size / 1024)) KB"
+          # This fork installs from Android 6 (minSdk 23), so the APK is v1-signed as well, which
+          # the JAR signature of a few hundred entries costs about 12 KB over the upstream floor.
+          test "$size" -lt 503808 || { echo "APK is over 492 KB; the launcher targets 1 GB TVs, keep it small"; exit 1; }
+
+      - name: Rename the artifact
+        run: cp launcher/app/build/outputs/apk/release/app-release.apk tvhome-android6.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tvhome-android6
+          path: tvhome-android6.apk
+          if-no-files-found: error
+
+      - name: Keep the latest APK on the branch as a release tag
+        # Every build replaces the 'apk' tag's release, so 电视上直接拉 latest always works:
+        #   https://github.com/bytefuck/cleanyourtv/releases/tag/apk
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          gh release delete apk --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag 2>/dev/null || true
+          gh release create apk tvhome-android6.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "tvhome Android 6 APK" \
+            --notes "Automated build of ${GITHUB_SHA::7} on branch ${GITHUB_REF_NAME}.
+          Install over ADB: adb install -r tvhome-android6.apk"
+        env:
+          GH_TOKEN: ${{ github.token }}
